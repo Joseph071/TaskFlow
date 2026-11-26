@@ -4,7 +4,7 @@ TaskFlow es una aplicación Flutter para organizar tareas de un taller de repara
 
 ## Alcance del proyecto
 
-En el taller, las tareas de recepción, diagnóstico, generación de comprobantes y sincronización pueden quedar dispersas. TaskFlow reúne estas actividades en una lista y permite consultar el detalle y cambiar el estado de cada tarea.
+Las tareas de recepción, diagnóstico, generación de comprobantes y sincronización pueden quedar dispersas. TaskFlow reúne estas actividades en una lista, permite consultar su detalle y cambiar su estado durante el uso de la aplicación.
 
 ### Historias de usuario y criterios de aceptación
 
@@ -18,7 +18,7 @@ En el taller, las tareas de recepción, diagnóstico, generación de comprobante
 
 ### Modelo de datos
 
-| Campo | Tipo | Descripción |
+| Campo de `Task` | Tipo | Descripción |
 | --- | --- | --- |
 | `id` | `int` | Identificador único de la tarea. |
 | `title` | `String` | Título de la tarea. |
@@ -27,11 +27,13 @@ En el taller, las tareas de recepción, diagnóstico, generación de comprobante
 | `isCompleted` | `bool` | Indica si la tarea está completada. |
 | `userId` | `int` | Identificador del usuario asociado. |
 
+El formulario usa `TaskDraft` para devolver el título, la descripción, la prioridad y una fecha opcional (`dueDate`, de tipo `DateTime?`).
+
 ### Pantallas
 
-- **Lista.** Muestra el título, la prioridad y un icono con el estado de cada tarea. Permite actualizar desde la barra superior o deslizando hacia abajo.
+- **Lista.** Muestra el título, la prioridad y un icono con el estado de cada tarea. Permite actualizar desde la barra superior o deslizando hacia abajo. El botón **Nueva tarea** abre el formulario.
 - **Detalle.** Muestra la información de la tarea seleccionada y permite marcarla como completada o pendiente.
-- **Formulario previsto.** Permitirá crear y editar tareas con campos de título, descripción y prioridad.
+- **Nueva tarea.** Valida que el título tenga al menos tres caracteres sin contar los espacios de los extremos. Permite escribir una descripción, elegir la prioridad y seleccionar una fecha opcional. Al pulsar **Guardar** con datos válidos, vuelve a la lista y muestra una confirmación. En la sesión 9 se devuelve un borrador. La creación mediante `POST` se implementará en la sesión 10.
 
 ### Requisitos no funcionales
 
@@ -55,21 +57,21 @@ El parámetro `userId=2` filtra las tareas del usuario 2. La API devuelve `id`, 
 
 `TaskApiService` realiza la consulta y registra el código HTTP en la consola. `RemoteTaskRepository` entrega las tareas a `TasksViewModel`, que avisa a la interfaz cuando cambia el estado de la consulta.
 
-Marcar una tarea como completada o pendiente cambia su estado solo en memoria. Al actualizar la lista, la aplicación vuelve a consultar el servidor y recupera su estado. Las cinco tareas del taller se conservan en `LocalTaskRepository` como datos de prueba.
+Marcar una tarea como completada o pendiente cambia su estado en memoria. Al actualizar la lista, la app vuelve a consultar el servidor y recupera su estado. Las cinco tareas del taller se conservan en `LocalTaskRepository` como datos de prueba.
 
 ### Operaciones previstas para una API propia
 
 | Método y ruta | Operación |
 | --- | --- |
 | `GET /tasks` | Listar tareas. |
-| `GET /tasks/:id` | Consultar el detalle. |
+| `GET /tasks/:id` | Consultar el detalle de una tarea. |
 | `POST /tasks` | Crear una tarea. |
 | `PATCH /tasks/:id` | Actualizar una tarea. |
 | `DELETE /tasks/:id` | Eliminar una tarea. |
 
 ## Cómo ejecutar el proyecto
 
-Desde la raíz de `taskflow`, con Flutter instalado y un dispositivo o emulador disponible, ejecuta los siguientes comandos.
+Desde la raíz de `taskflow`, con Flutter instalado y un dispositivo o emulador disponible, ejecuta estos comandos.
 
 ```sh
 flutter pub get
@@ -80,10 +82,21 @@ Con Internet y el filtro `userId=2`, una consulta exitosa muestra en la consola 
 
 ## Sesión 8 — Estados de la lista remota
 
-| Estado | Cómo provocarlo | Resultado esperado |
+| Estado | Cómo probarlo | Resultado esperado |
 | --- | --- | --- |
-| **Carga** | Pulsa el icono de actualizar. Si la respuesta es muy rápida, reduce la velocidad de red del emulador. | Se muestra un indicador mientras se espera la respuesta. |
-| **Datos** | Abre la app con Internet y `userId=2`. Toca una tarjeta. | Aparece la lista remota y se abre el detalle de la tarea seleccionada. |
-| **Vacío** | Cambia temporalmente `userId` a `9999` en `lib/features/tasks/data/task_api_service.dart` y reinicia la app. Después de la prueba, restaura `userId=2`. | Aparece el mensaje de lista vacía con el botón **Actualizar**. |
-| **Error** | Desconecta Internet en el emulador y pulsa el icono de actualizar. | Aparece un mensaje de error con el botón **Reintentar**. |
-| **Recuperación** | Desde la pantalla de error, vuelve a conectar Internet y pulsa **Reintentar**. | La lista remota vuelve a aparecer sin reiniciar TaskFlow. |
+| Carga | Pulsa el icono de actualizar. Si la respuesta es muy rápida, reduce la velocidad de red del emulador. | Aparece un indicador mientras se espera la respuesta. |
+| Datos | Abre la app con Internet y `userId=2`, y toca una tarjeta. | Aparece la lista remota y se abre el detalle de la tarea seleccionada. |
+| Vacío | Cambia temporalmente `userId` a `9999` en `task_api_service.dart` y reinicia la app. Restaura el valor `2` al terminar. | Aparece el mensaje de lista vacía y el botón **Actualizar**. |
+| Error | Desconecta Internet en el emulador y pulsa el icono de actualizar. | Aparece el mensaje de error y el botón **Reintentar**. |
+| Recuperación | Reconecta Internet y pulsa **Reintentar**. | La lista remota vuelve a aparecer sin reiniciar la app. |
+
+## Sesión 9 — Formulario de nueva tarea
+
+| Caso | Cómo probarlo | Resultado esperado |
+| --- | --- | --- |
+| Título vacío | Abre **Nueva tarea** y pulsa **Guardar** sin escribir un título. | El formulario sigue abierto y solicita un título. |
+| Título demasiado corto | Escribe `PC` y pulsa **Guardar**. | El formulario indica que el título necesita al menos tres caracteres. |
+| Tarea válida sin fecha | Escribe `Revisar laptop Dell`, elige una prioridad y pulsa **Guardar** con la fecha vacía. | La app vuelve a la lista y muestra `Formulario válido: Revisar laptop Dell`. |
+| Tarea válida con fecha | Escribe un título válido, pulsa **Elegir fecha**, selecciona un día y guarda. | El formulario muestra la fecha seleccionada y la incluye en el borrador al volver a la lista. |
+| Volver sin guardar | Abre el formulario y pulsa la flecha de regreso. | La app vuelve a la lista sin mostrar una confirmación nueva. |
+| Detalle de una tarea existente | Toca una tarjeta de la lista. | Se abre el detalle de la tarea seleccionada. |
